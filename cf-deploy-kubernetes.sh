@@ -105,7 +105,7 @@ echo "---> Kubernetes objects to deploy in  $deployment_file :"
 KUBECTL_OBJECTS=/tmp/deployment.objects
 
 KUBE_RUN_FLAGS=--local=true
-if (( "$SERVER_VERSION" < "15" )); then KUBE_RUN_FLAGS+= --no-headers=true; fi
+if (( "$SERVER_VERSION" < "13" )); then KUBE_RUN_FLAGS+= --no-headers=true; fi
 
 kubectl convert -f "$DEPLOYMENT_FILE" $(KUBE_RUN_FLAGS) -o=custom-columns="KIND:{.kind},NAME:{.metadata.name}" > >(tee $KUBECTL_OBJECTS) 2>${KUBECTL_OBJECTS}.errors
 
