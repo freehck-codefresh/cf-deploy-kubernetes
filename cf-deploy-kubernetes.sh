@@ -102,22 +102,19 @@ $(dirname $0)/template.sh "$deployment_file" > "$DEPLOYMENT_FILE" || fatal "Fail
 
 
 echo "---> Kubernetes objects to deploy in  $deployment_file :"
-KUBECTL_OBJECTS=/tmp/deployment.objects
 
-KUBE_RUN_FLAGS=--local=true
-if (( "$SERVER_VERSION" < "13" )); then KUBE_RUN_FLAGS+= --no-headers=true; fi
-
-kubectl convert -f "$DEPLOYMENT_FILE" $(KUBE_RUN_FLAGS) -o=custom-columns="KIND:{.kind},NAME:{.metadata.name}" > >(tee $KUBECTL_OBJECTS) 2>${KUBECTL_OBJECTS}.errors
-
-if [ $? != 0 ]; then
-   cat ${KUBECTL_OBJECTS}.errors
-   echo "Failed to parse $deployment_file with kubectl... "
-   echo "Using alternative parsing method... "
-   truncate -s 0 $KUBECTL_OBJECTS
-   objects $DEPLOYMENT_FILE | tee $KUBECTL_OBJECTS
+DEPLOYMENT_NAME=grep -zoP '\n(\s*)metadata:(\n\1\s+.*)+name: \K.*' "$DEPLOYMENT_FILE"
+if [ -z "$DEPLOYMENT_NAME" ]; then
+    kubectl convert -f "$DEPLOYMENT_FILE" --local=true --no-headers=true -o=custom-columns="KIND:{.kind},NAME:{.metadata.name}" > >(tee $KUBECTL_OBJECTS) 2>${KUBECTL_OBJECTS}.errors
+    if [ $? != 0 ]; then
+        cat ${KUBECTL_OBJECTS}.errors
+        echo "Failed to parse $deployment_file with kubectl... "
+        echo "Using alternative parsing method... "
+        truncate -s 0 $KUBECTL_OBJECTS
+        objects $DEPLOYMENT_FILE | tee $KUBECTL_OBJECTS
+    fi
+    DEPLOYMENT_NAME=$(awk '/^Deployment /{a=$2}END{print a}' $KUBECTL_OBJECTS)
 fi
-
-DEPLOYMENT_NAME=$(awk '/^Deployment /{a=$2}END{print a}' $KUBECTL_OBJECTS)
 
 echo "---> Submitting a deployment to Kubernetes by
    kubectl --context "${KUBECONTEXT}" --namespace "${KUBERNETES_NAMESPACE}" $KUBECTL_ACTION "
