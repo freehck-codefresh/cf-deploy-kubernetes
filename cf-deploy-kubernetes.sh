@@ -102,8 +102,8 @@ $(dirname $0)/template.sh "$deployment_file" > "$DEPLOYMENT_FILE" || fatal "Fail
 
 
 echo "---> Kubernetes objects to deploy in  $deployment_file :"
-
-DEPLOYMENT_NAME=grep -zoP '\n(\s*)metadata:(\n\1\s+.*)+name: \K.*' "$DEPLOYMENT_FILE"
+KUBECTL_OBJECTS=/tmp/deployment.objects
+DEPLOYMENT_NAME=`grep -zoP '\n(\s*)metadata:(\n\1\s+.*)+name: \K.*' "$DEPLOYMENT_FILE"`
 if [ -z "$DEPLOYMENT_NAME" ]; then
     kubectl convert -f "$DEPLOYMENT_FILE" --local=true --no-headers=true -o=custom-columns="KIND:{.kind},NAME:{.metadata.name}" > >(tee $KUBECTL_OBJECTS) 2>${KUBECTL_OBJECTS}.errors
     if [ $? != 0 ]; then
